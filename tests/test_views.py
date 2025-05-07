@@ -12,7 +12,7 @@ from src.views import card_info, currency_rate, send_greeting, stock_currency, s
 
 @fixture()
 def date_with_data() -> Any:
-    return read_files("data/operations.xls")
+    return read_files("data/operations.xlsx")
 
 
 @patch("yfinance.Ticker")
@@ -77,3 +77,10 @@ def test_get_currency_rate(mock_get: Any) -> None:
 def test_greeting(hour: str, expected: str) -> None:
     assert send_greeting(hour) == expected
 
+
+def test_get_card_number(date_with_data: Any) -> None:
+    assert "*7197" in card_info(date_with_data)  # Проверяем, что карта присутствует в списке
+
+
+def test_total_sum_amount(date_with_data: Any) -> None:
+    assert sum_amount_of_card(date_with_data, "*7197", "01.01.2023", "31.12.2023") == -1928562  # Укажите нужный период

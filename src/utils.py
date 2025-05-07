@@ -12,7 +12,9 @@ def setup_logging() -> Logger:
     функция, которая настраивает логирование.
     """
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(module)s - %(levelname)s - %(message)s", encoding="utf-8"
+        level=logging.INFO,
+        format="%(asctime)s - %(module)s - %(levelname)s - %(message)s",
+        encoding="utf-8",
     )
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)

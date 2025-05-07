@@ -1,4 +1,3 @@
-
 from src.services import filter_state
 
 
@@ -58,4 +57,3 @@ def test_filter_state() -> None:
             "Сумма операции с округлением": 50.0,
         }
     ]
-

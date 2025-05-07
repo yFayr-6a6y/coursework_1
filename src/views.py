@@ -33,29 +33,37 @@ def send_greeting(h: Any) -> str:
         return "Доброй ночи!"
 
 
-def card_info(data: Any) -> Any:
+def card_info(data: Any) -> list[str]:
     """
-    возвращает номер карты пользователя.
+    возвращает список уникальных номеров карт пользователя.
     """
     if data is not None:
-        for transaction in data:
-            logger.info("Результат 'card_info' - %s" % transaction)
-            return transaction["Номер карты"]
+        unique_cards = list(set(transaction["Номер карты"] for transaction in data))
+        logger.info("Результат 'card_info' - %s" % unique_cards)
+        return unique_cards
     else:
         logger.info("Данных не найдено")
-        return None
+        return []
 
 
-def sum_amount_of_card(data: Any, card: Any) -> int:
+def sum_amount_of_card(data: Any, card: str, start_date: str = None, end_date: str = None) -> float:
     """
-    возвращает общую сумму всех транзакций пользователя.
+    возвращает общую сумму транзакций для указанной карты за указанный период.
     """
     total = 0
-    if card:
+    if card and data:
         for transaction in data:
-            total += transaction["Сумма операции"]
-    logger.info("Результат 'sum_amount_of_card' - %s" % transaction)
-    return round(total)
+            transaction_date = datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M")
+            # Проверяем, попадает ли дата транзакции в указанный период
+            if start_date and end_date:
+                start = datetime.strptime(start_date, "%d.%m.%Y")
+                end = datetime.strptime(end_date, "%d.%m.%Y")
+                if not (start <= transaction_date <= end):
+                    continue
+            if transaction["Номер карты"] == card:
+                total += transaction["Сумма операции"]
+    logger.info("Результат 'sum_amount_of_card' для карты %s - %s" % (card, total))
+    return round(total, 2)
 
 
 def total_cashback(sum: int) -> int:
@@ -67,19 +75,29 @@ def total_cashback(sum: int) -> int:
     return total
 
 
-def top_5_transactions(data: Any) -> list[dict[str, Any]] | None:
+def top_5_transactions(data: Any, start_date: str = None, end_date: str = None) -> list[dict[str, Any]] | None:
     """
-    возвращает топ-5 транзакций пользователя по сумме.
+    возвращает топ-5 транзакций пользователя по сумме за указанный период.
     """
     if data is not None:
+        filtered_data = []
+        if start_date and end_date:
+            start = datetime.strptime(start_date, "%d.%m.%Y")
+            end = datetime.strptime(end_date, "%d.%m.%Y")
+            for transaction in data:
+                transaction_date = datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M")
+                if start <= transaction_date <= end:
+                    filtered_data.append(transaction)
+        else:
+            filtered_data = data
 
         def sum_of_operation(transaction: Any) -> Any:
             return transaction["Сумма операции"]
 
-        data.sort(key=sum_of_operation, reverse=True)
+        filtered_data.sort(key=sum_of_operation, reverse=True)
 
-        result: list = []
-        for operation in data:
+        result = []
+        for operation in filtered_data:
             if len(result) < 5:
                 result.append(
                     {
@@ -124,21 +142,40 @@ def stock_currency(stock: str) -> Any:
         return 0.0
 
 
-def create_operations(greetin: Any, card_numbers: Any, total_sum: Any, cashbacks: Any, top: Any) -> Any:
+def create_operations(greetin: str, cards: list[str], data: Any, start_date: str = None, end_date: str = None) -> dict:
     """
-    возвращает словарь с данными пользователя.
+    возвращает словарь с данными пользователя, включая группировку по картам.
     """
-    data = {"greeting": greetin, "cards": [], "top_transactions": [], "currency_rates": [], "stock_prices": []}
-    if card_numbers not in [card["last_digits"] for card in data["cards"]] and card_numbers is not None:
-        data["cards"].append({"last_digits": card_numbers, "total_spent": round(total_sum, 2), "cashback": cashbacks})
-    data["top_transactions"] = top
-    data["currency_rates"].append(
+    result = {
+        "greeting": greetin,
+        "cards": [],
+        "top_transactions": [],
+        "currency_rates": [],
+        "stock_prices": [],
+    }
+
+    # Добавляем информацию по каждой карте
+    for card in cards:
+        total_sum = sum_amount_of_card(data, card, start_date, end_date)
+        cashback = total_cashback(total_sum)
+        result["cards"].append(
+            {
+                "last_digits": card,
+                "total_spent": total_sum,
+                "cashback": cashback,
+            }
+        )
+
+    # Топ-5 транзакций (фильтруем по периоду, если указан)
+    result["top_transactions"] = top_5_transactions(data, start_date, end_date)
+
+    result["currency_rates"].append(
         (
             {"currency": "USD", "rate": round(currency_rate("USD"), 2)},
             {"currency": "EUR", "rate": round(currency_rate("EUR"), 2)},
         )
     )
-    data["stock_prices"].append(
+    result["stock_prices"].append(
         [
             {"stock": "AAPL", "price": round(stock_currency("AAPL"), 2)},
             {"stock": "AMZN", "price": round(stock_currency("AMZN"), 2)},
@@ -147,17 +184,19 @@ def create_operations(greetin: Any, card_numbers: Any, total_sum: Any, cashbacks
             {"stock": "TSLA", "price": round(stock_currency("TSLA"), 2)},
         ]
     )
-    logger.info("Результат 'create_operations' - %s" % data)
-    return data
+
+    logger.info("Результат 'create_operations' - %s" % result)
+    return result
 
 
 def views_() -> None:
-    time = input("Введите время(в формате - DD.MM.YYYY HH:MM):")
+    time = input("Введите время (в формате - DD.MM.YYYY HH:MM): ")
+    start_date = input("Введите дату начала периода (в формате - DD.MM.YYYY): ")
+    end_date = input("Введите дату конца периода (в формате - DD.MM.YYYY): ")
+
     greetin = send_greeting(time if time else None)
-    card_numbers = card_info(read_files("../data/operations.xls"))
-    total_sum = sum_amount_of_card(read_files("../data/operations.xls"), card_numbers)
-    cashbacks = total_cashback(total_sum)
-    top = top_5_transactions(read_files("../data/operations.xls"))
-    created = create_operations(greetin, card_numbers, total_sum, cashbacks, top)
+    data = read_files("../data/operations.xlsx")
+    card_numbers = card_info(data)
+    created = create_operations(greetin, card_numbers, data, start_date, end_date)
     write_data("views.json", created)
-    print(f'Главная:{read_files("views.json")}')
+    print(f'Главная: {read_files("views.json")}')
