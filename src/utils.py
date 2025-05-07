@@ -35,7 +35,7 @@ logger = setup_logging()
 
 def read_files(file_path: Any) -> Any:
     """открытие файла '.xls'"""
-    if Path(file_path).suffix.lower() == ".xls":
+    if Path(file_path).suffix.lower() == ".xlsx":
         df = pd.read_excel(file_path)
         return df.to_dict(orient="records")
     elif Path(file_path).suffix.lower() == ".json":

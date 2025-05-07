@@ -53,7 +53,7 @@ def sum_amount_of_card(data: Any, card: str, start_date: str = None, end_date: s
     total = 0
     if card and data:
         for transaction in data:
-            transaction_date = datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M")
+            transaction_date = datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M:%S")
             # Проверяем, попадает ли дата транзакции в указанный период
             if start_date and end_date:
                 start = datetime.strptime(start_date, "%d.%m.%Y")
@@ -85,7 +85,7 @@ def top_5_transactions(data: Any, start_date: str = None, end_date: str = None) 
             start = datetime.strptime(start_date, "%d.%m.%Y")
             end = datetime.strptime(end_date, "%d.%m.%Y")
             for transaction in data:
-                transaction_date = datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M")
+                transaction_date = datetime.strptime(transaction["Дата операции"], "%d.%m.%Y %H:%M:%S")
                 if start <= transaction_date <= end:
                     filtered_data.append(transaction)
         else:

@@ -1,61 +1,44 @@
-from typing import Any
-from pytest import fixture
-from src.services import filter_state
+from typing import Any, List, Dict
+
+from src.utils import setup_logging, write_data, read_files
+
+logger = setup_logging()
 
 
-@fixture
-def sample_operations() -> list[dict[str, Any]]:
-    return [
-        {
-            "Дата операции": "16.10.2021 15:16:16",
-            "Дата платежа": "16.10.2021",
-            "Номер карты": None,
-            "Статус": "OK",
-            "Сумма операции": -50.0,
-            "Валюта операции": "RUB",
-            "Сумма платежа": -50.0,
-            "Валюта платежа": "RUB",
-            "Кэшбэк": None,
-            "Категория": "Переводы",
-            "MCC": None,
-            "Описание": "Азер Г.",
-            "Бонусы (включая кэшбэк)": 0,
-            "Округление на инвесткопилку": 0,
-            "Сумма операции с округлением": 50.0,
-        },
-        {
-            "Дата операции": "15.10.2021 21:25:17",
-            "Дата платежа": "16.10.2021",
-            "Номер карты": "*7197",
-            "Статус": "OK",
-            "Сумма операции": -86.0,
-            "Валюта операции": "RUB",
-            "Сумма платежа": -86.0,
-            "Валюта платежа": "RUB",
-            "Кэшбэк": None,
-            "Категория": "Местный транспорт",
-            "MCC": 4111.0,
-            "Описание": "Северо-Западная пригородная пассажирская компания",
-            "Бонусы (включая кэшбэк)": 1,
-            "Округление на инвесткопилку": 0,
-            "Сумма операции с округлением": 86.0,
-        },
-    ]
+def filter_state(operations: List[Dict[Any, Any]], search_query: str) -> List[Dict[Any, Any]]:
+    """
+    Фильтрует операции по строке поиска в полях 'Категория' или 'Описание'.
 
+    Args:
+        operations: Список словарей с данными транзакций.
+        search_query: Строка для поиска (регистронезависимая).
 
-def test_filter_state(sample_operations: list[dict[str, Any]]) -> None:
-    result = filter_state(sample_operations, "Переводы")
-    assert len(result) == 1
-    assert result[0]["Категория"] == "Переводы"
-    assert result[0]["Описание"] == "Азер Г."
+    Returns:
+        Список отфильтрованных операций.
+    """
+    if not operations or not search_query:
+        logger.info("Операции или строка поиска отсутствуют")
+        return []
 
-    result = filter_state(sample_operations, "Северо-Западная")
-    assert len(result) == 1
-    assert result[0]["Категория"] == "Местный транспорт"
-    assert "Северо-Западная" in result[0]["Описание"]
+    result = []
+    search_query = search_query.lower()  # Приводим к нижнему регистру для регистронезависимого поиска
 
-    result = filter_state(sample_operations, "")
-    assert len(result) == 0
+    for operation in operations:
+        category = operation.get("Категория", "").lower()
+        description = operation.get("Описание", "").lower()
+        # Проверяем, содержится ли строка поиска в категории или описании
+        if search_query in category or search_query in description:
+            result.append(operation)
 
-    result = filter_state(sample_operations, "Несуществующий")
-    assert len(result) == 0
+    logger.info("Результат 'filter_state' для запроса '%s' - %s операций" % (search_query, len(result)))
+    write_data("services.json", result)  # Исправлено имя файла
+    return result
+
+def servies_() -> None:
+    """
+    Запрашивает строку поиска и выводит отфильтрованные операции из Excel-файла.
+    """
+    search_query = input("Введите строку поиска (например, 'Переводы'): ")
+    operations = read_files("../data/operations.xls")  # Загружаем данные из Excel
+    filtered_operations = filter_state(operations, search_query)
+    print(f"\nСервисы: {filtered_operations}")
