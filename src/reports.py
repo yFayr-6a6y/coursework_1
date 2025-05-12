@@ -66,9 +66,6 @@ def search_category(transactions: pd.DataFrame, category: str, date: Optional[pd
         total = -filtered_transactions["Сумма операции"].sum()
         result["total"] = total
 
-    with open("reports.json", "w", encoding="utf-8") as f:
-        json.dump(result, f, indent=4, ensure_ascii=False)
-
     logger.info(f"Result - {result}")
     return result
 

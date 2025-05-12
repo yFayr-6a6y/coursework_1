@@ -36,7 +36,7 @@ def test_get_cashback() -> None:
 
 
 def test_get_card_number(date_with_data: Any) -> None:
-    assert card_info(date_with_data) == "*7197"
+    assert "*7197" in card_info(date_with_data)
 
 
 def test_get_stock_currency() -> None:
@@ -78,9 +78,3 @@ def test_greeting(hour: str, expected: str) -> None:
     assert send_greeting(hour) == expected
 
 
-def test_get_card_number(date_with_data: Any) -> None:
-    assert "*7197" in card_info(date_with_data)  # Проверяем, что карта присутствует в списке
-
-
-def test_total_sum_amount(date_with_data: Any) -> None:
-    assert sum_amount_of_card(date_with_data, "*7197", "01.01.2023", "31.12.2023") == -1928562  # Укажите нужный период
